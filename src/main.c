@@ -1,7 +1,7 @@
 #include "settings/constants.h"
 #include "memory/memory.h"
 #include "log/logger.h"
-#include "dhcp/client.h"
+#include "dhcp/client/client.h"
 
 logger_t logger;
 dhcp_client_t dhcp_client;
@@ -19,8 +19,12 @@ int main(int argc, char *argv[]) {
     memory_init();
     logger_create(&logger, "main", CONSTANT_LOG_LEVEL);
     dhcp_client_create(&dhcp_client, on_offer, on_ack);
+    dhcp_client_init(dhcp_client);
 
     logger_info(logger, "Performing DHCP starvation attack");
     dhcp_client_discovery(dhcp_client);
+
+    dhcp_client_destroy(dhcp_client);
+    logger_destroy(logger);
     return 0;
 }
