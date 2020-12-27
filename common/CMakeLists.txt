@@ -11,4 +11,13 @@ add_library (
     network/network-win.c
 )
 
-target_include_directories(common PRIVATE .)
+target_include_directories(common PUBLIC
+    .
+    ../dependencies/npcap-sdk-1.06/Include
+)
+
+target_link_directories(common PUBLIC
+    ../dependencies/npcap-sdk-1.06/Lib/x64
+)
+
+target_link_libraries(common PUBLIC wpcap)
