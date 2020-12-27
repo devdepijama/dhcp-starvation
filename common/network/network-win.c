@@ -15,22 +15,28 @@
 #define PCAP_E_SUCCESSFUL               0
 #define PCAP_E_COULD_NOT_LOAD_DLL       -1
 #define PCAP_E_COULD_NOT_FIND_DEVICES   -2
+#define PCAP_E_COULD_NOT_OPEN_DEVICE    -3
+#define PCAP_E_COULD_NOT_SEND_PACKET    -4
 
 struct network_s {
     logger_t logger;
     pcap_if_t **devices;
     size_t devices_length;
+    pcap_t *pcap_handler;
+    on_frame_received_cfg_t on_frame_received_cfg;
 };
 
 // Forward declaration of private methods
 int _load_pcap_dlls(logger_t logger);
-
 int _get_list_of_interfaces(logger_t logger, pcap_if_t ***devices, size_t *length);
+int _open_pcap_capture(network_t instance);
+void _pcap_loop_callback(uint8_t *args, const struct pcap_pkthdr *header, const uint8_t *frame);
 
-int network_create(network_t *instance) {
+int network_create(network_t *instance, on_frame_received_cfg_t on_frame_received_cfg) {
     *instance = memory_alloc(sizeof(struct network_s), DESCRIPTION_INSTANCE);
     logger_create(&((*instance)->logger), "network", CONSTANT_LOG_LEVEL);
     (*instance)->devices_length = 0;
+    (*instance)->on_frame_received_cfg = on_frame_received_cfg;
 
     return NETWORK_E_SUCCESSFUL;
 }
@@ -53,12 +59,28 @@ int network_init(network_t instance) {
         return NETWORK_E_COULD_NOT_INIT;
     }
 
+    logger_info(instance->logger, "Opening default device (hardcoded, by now)...");
+    if (_open_pcap_capture(instance) != PCAP_E_SUCCESSFUL) {
+        logger_error(instance->logger, "Could not open device");
+        return NETWORK_E_COULD_NOT_INIT;
+    }
+    logger_info(instance->logger, "Device opened successfully");
+
+    pcap_loop(instance->pcap_handler, -1, _pcap_loop_callback, (uint8_t *) instance);
+
     return NETWORK_E_SUCCESSFUL;
 }
 
 int network_send(network_t instance, uint8_t *packet, size_t size) {
+
     logger_info(instance->logger, "Sending a network packet...");
     log_bytes(instance->logger, logger_debug, packet, size);
+
+    if (pcap_inject(instance->pcap_handler, packet, size) <= 0) {
+        logger_error(instance->logger, "Failed to send bytes to wire. Details: %s", pcap_geterr(instance->pcap_handler));
+        return PCAP_E_COULD_NOT_SEND_PACKET;
+    }
+
     return NETWORK_E_SUCCESSFUL;
 }
 
@@ -67,6 +89,8 @@ int network_destroy(network_t instance) {
 
     logger_destroy(instance->logger);
     memory_free(instance, DESCRIPTION_INSTANCE);
+
+    pcap_close(instance->pcap_handler);
 
     pcap_freealldevs(*(instance->devices));
     memory_free(instance->devices, DESCRIPTION_PCAP_INTERFACES);
@@ -122,4 +146,27 @@ int _get_list_of_interfaces(logger_t logger, pcap_if_t ***devices, size_t *lengt
     }
 
     return PCAP_E_SUCCESSFUL;
+}
+
+int _open_pcap_capture(network_t instance) {
+    char errbuf[PCAP_ERRBUF_SIZE];
+
+    logger_info(instance->logger, "Using device %s", CONSTANT_NETWORK_INTERFACE_NAME);
+    instance->pcap_handler = pcap_open_live(CONSTANT_NETWORK_INTERFACE_NAME, BUFSIZ, 0, 10, errbuf);
+    if (instance->pcap_handler == NULL) {
+        logger_error(instance->logger, "Failed to open device. Details: %s", errbuf);
+        return PCAP_E_COULD_NOT_OPEN_DEVICE;
+    }
+
+    return PCAP_E_SUCCESSFUL;
+}
+
+void _pcap_loop_callback(uint8_t *args, const struct pcap_pkthdr *header, const uint8_t *frame) {
+    network_t instance = (network_t) args;
+
+    logger_debug(instance->logger, "Received a frame");
+    on_frame_received_t *callback = instance->on_frame_received_cfg.callback;
+    void *callback_args = instance->on_frame_received_cfg.args;
+
+    callback(instance, callback_args, frame, header->len);
 }
