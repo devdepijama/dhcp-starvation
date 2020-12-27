@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-uint32_t packet_builder_create_discovery(uint8_t *packet, size_t size);
-uint32_t packet_builder_create_request(uint8_t *packet, size_t size);
+size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8_t *mac);
+size_t packet_builder_create_request(uint8_t *packet, size_t size);
 
 #endif
