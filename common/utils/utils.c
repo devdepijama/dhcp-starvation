@@ -1,4 +1,6 @@
 #include "utils/utils.h"
+#include <stdio.h>
+#include <string.h>
 
 void log_bytes(logger_t logger, logger_function_t level, uint8_t *buffer, size_t size) {
     const size_t bytes_per_line = 16;
