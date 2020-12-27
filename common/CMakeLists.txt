@@ -6,6 +6,7 @@ add_library (
     memory/memory.c
     dhcp/client/client.c
     dhcp/client/utils/packet-builder.c
+    dhcp/client/utils/packet-unpacker.c
     utils/utils.c
 
     network/network-win.c
