@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-#define NETWORK_E_SUCCESSFUL 0
+#define NETWORK_E_SUCCESSFUL        0
+#define NETWORK_E_COULD_NOT_INIT    -1
 
 typedef struct network_s* network_t;
 

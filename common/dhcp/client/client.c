@@ -35,6 +35,7 @@ int dhcp_client_create(dhcp_client_t *instance, dhcp_client_on_offer_callback_t 
 
 int dhcp_client_init(dhcp_client_t instance) {
     logger_info(instance->logger, "Initializing...");
+    network_init(instance->network);
     return DHCP_CLIENT_E_SUCCESSFUL;
 }
 
