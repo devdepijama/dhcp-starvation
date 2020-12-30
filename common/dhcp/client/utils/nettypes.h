@@ -29,6 +29,7 @@
 #define MESSAGE_TYPE_REQ_IP                 50
 #define MESSAGE_TYPE_LEASE_TIME_IN_SEC      51
 #define MESSAGE_TYPE_DHCP                   53
+#define MESSAGE_TYPE_CLIENT_IDENTIFIER      61
 #define MESSAGE_TYPE_PARAMETER_REQ_LIST     55
 #define MESSAGE_TYPE_END                    255
 

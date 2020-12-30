@@ -49,11 +49,11 @@ int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac) {
     return DHCP_CLIENT_E_SUCCESSFUL;
 }
 
-int dhcp_client_request(dhcp_client_t instance) {
+int dhcp_client_request(dhcp_client_t instance, dhcp_client_request_data_t data) {
     size_t packet_size = 0;
     logger_info(instance->logger, "Performing request...");
 
-    packet_size = packet_builder_create_request(instance->packet, sizeof(instance->packet));
+    packet_size = packet_builder_create_request(instance->packet, sizeof(instance->packet), data);
     network_send(instance->network, instance->packet, packet_size);
 
     return DHCP_CLIENT_E_SUCCESSFUL;
@@ -80,7 +80,6 @@ static void _dhcp_on_network_packet_received(network_t network, const void *args
 
     logger_info(instance->logger, "Received a DHCP packet");
     if (dhcp->opcode == DHCP_OPTION_OFFER) {
-        logger_info(instance->logger, "It's an OFFER...");
         ip4_t gateway;
         ip4_t subnet;
         ip4_t dns;
@@ -94,16 +93,21 @@ static void _dhcp_on_network_packet_received(network_t network, const void *args
         read_dhcp_option(dhcp, MESSAGE_TYPE_LEASE_TIME_IN_SEC, (uint8_t *) &lease_period, sizeof(lease_period));
         ip.as_int = dhcp->yiaddr.as_int;
 
-        dhcp_client_offer_data_t data = {
-            .gateway = gateway,
-            .subnet = subnet,
-            .dns = dns,
-            .ip = ip,
-            .lease_period_in_seconds = ntohl(lease_period)
-        };
-        void *args = instance->callbacks.on_offer_callback_cfg.args;
-        instance->callbacks.on_offer_callback_cfg.callback(instance, args, data);
-        return;
+        if (ip.as_int != 0) {
+            logger_info(instance->logger, "It's an OFFER...");
+
+            dhcp_client_offer_data_t data = {
+                    .gateway = gateway,
+                    .subnet = subnet,
+                    .dns = dns,
+                    .ip = ip,
+                    .lease_period_in_seconds = ntohl(lease_period)
+            };
+            void *args = instance->callbacks.on_offer_callback_cfg.args;
+            instance->callbacks.on_offer_callback_cfg.callback(instance, args, data);
+            return;
+        }
+        logger_info(instance->logger, "It's a NAK...");
     }
 
     if (dhcp->opcode == DHCP_OPTION_PACK) {

@@ -9,29 +9,28 @@ static void ip_output(struct ip *ip_header, int *len);
 static void udp_output(struct udphdr *udp_header, int *len);
 static void dhcp_output(dhcp_t *dhcp, const uint8_t *mac, int *len);
 static int fill_dhcp_discovery_options(dhcp_t *dhcp);
-static int fill_dhcp_request_options(dhcp_t *dhcp);
+static int fill_dhcp_request_options(dhcp_t *dhcp, dhcp_client_request_data_t data);
 static int fill_dhcp_option(uint8_t *packet, uint8_t code, uint8_t *data, uint8_t len);
 static uint16_t in_cksum(uint16_t *addr, size_t len);
 
 size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8_t *mac) {
     size_t len = 0;
-    struct udphdr *udp_header;
-    struct ip *ip_header;
-    dhcp_t *dhcp;
+    struct ip *ip_header = (struct ip *) (packet + sizeof(struct ether_header));
+    struct udphdr *udp_header = (struct udphdr *) (((char *)ip_header) + sizeof(struct ip));
+    dhcp_t *dhcp = (dhcp_t *) (((char *)udp_header) + sizeof(struct udphdr));
 
-    ip_header = (struct ip *)(packet + sizeof(struct ether_header));
-    udp_header = (struct udphdr *)(((char *)ip_header) + sizeof(struct ip));
-    dhcp = (dhcp_t *)(((char *)udp_header) + sizeof(struct udphdr));
+    uint8_t option = DHCP_OPTION_DISCOVER;
+    len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_DHCP, &option, sizeof(option));
+    option = 0;
+    len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_END, &option, sizeof(option));
 
-    len = fill_dhcp_discovery_options(dhcp);
     dhcp_output(dhcp, mac, &len);
     udp_output(udp_header, &len);
     ip_output(ip_header, &len);
     return ether_output(packet, mac, len);
 }
 
-size_t packet_builder_create_request(uint8_t *packet, size_t size) {
-    /*
+size_t packet_builder_create_request(uint8_t *packet, size_t size, dhcp_client_request_data_t data) {
     size_t len = 0;
     struct udphdr *udp_header;
     struct ip *ip_header;
@@ -40,14 +39,15 @@ size_t packet_builder_create_request(uint8_t *packet, size_t size) {
     ip_header = (struct ip *)(packet + sizeof(struct ether_header));
     udp_header = (struct udphdr *)(((char *)ip_header) + sizeof(struct ip));
     dhcp = (dhcp_t *)(((char *)udp_header) + sizeof(struct udphdr));
+    memset(dhcp, 0, sizeof(dhcp_t));
+    dhcp->ciaddr.as_int = data.offer_data.ip.as_int;
+    dhcp->yiaddr.as_int = 0;
 
-    len = fill_dhcp_discovery_options(dhcp);
-    dhcp_output(dhcp, mac, &len);
+    len = fill_dhcp_request_options(dhcp, data);
+    dhcp_output(dhcp, data.mac, &len);
     udp_output(udp_header, &len);
     ip_output(ip_header, &len);
-    return ether_output(packet, mac, len);
-     */
-    return 0;
+    return ether_output(packet, data.mac, len);
 }
 
 /*
@@ -103,7 +103,6 @@ static void udp_output(struct udphdr *udp_header, int *len) {
  */
 static void dhcp_output(dhcp_t *dhcp, const uint8_t *mac, int *len) {
     *len += sizeof(dhcp_t);
-    memset(dhcp, 0, sizeof(dhcp_t));
 
     dhcp->opcode = DHCP_BOOTREQUEST;
     dhcp->htype = DHCP_HARDWARE_TYPE_10_EHTHERNET;
@@ -115,14 +114,11 @@ static void dhcp_output(dhcp_t *dhcp, const uint8_t *mac, int *len) {
 
 static int fill_dhcp_discovery_options(dhcp_t *dhcp) {
     int len = 0;
-    uint32_t req_ip;
     uint8_t parameter_req_list[] = {MESSAGE_TYPE_REQ_SUBNET_MASK, MESSAGE_TYPE_ROUTER, MESSAGE_TYPE_DNS, MESSAGE_TYPE_DOMAIN_NAME};
     uint8_t option;
 
     option = DHCP_OPTION_DISCOVER;
     len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_DHCP, &option, sizeof(option));
-    req_ip = htonl(0xc0a8010a);
-    len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_REQ_IP, (uint8_t *)&req_ip, sizeof(req_ip));
     len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_PARAMETER_REQ_LIST, (uint8_t *)&parameter_req_list, sizeof(parameter_req_list));
     option = 0;
     len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_END, &option, sizeof(option));
@@ -130,8 +126,31 @@ static int fill_dhcp_discovery_options(dhcp_t *dhcp) {
     return len;
 }
 
-static int fill_dhcp_request_options(dhcp_t *dhcp) {
+static int fill_dhcp_request_options(dhcp_t *dhcp, dhcp_client_request_data_t data) {
+    int len = 0;
+    uint8_t parameter_req_list[] = {MESSAGE_TYPE_REQ_SUBNET_MASK, MESSAGE_TYPE_ROUTER, MESSAGE_TYPE_DNS, MESSAGE_TYPE_DOMAIN_NAME};
+    uint8_t option;
 
+    option = DHCP_OPTION_REQUEST;
+
+    // 53 - DHCP Message Type
+    len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_DHCP, &option, sizeof(option));
+
+    // 61 - Client Identifier (Mac address)
+    len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_CLIENT_IDENTIFIER, (uint8_t *) data.mac, LENGTH_MAC_ADDRESS_AS_BYTES);
+
+    // 12 - Hostname - IGNORED
+    // 81 - Client Fully Qualified Domain name - IGNORED
+    // 60 - Vendor Class identifier - IGNORED
+
+    // 55 - Request parameter list
+    len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_PARAMETER_REQ_LIST, (uint8_t *)&parameter_req_list, sizeof(parameter_req_list));
+
+    // 255- END
+    option = 0;
+    len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_END, &option, sizeof(option));
+
+    return len;
 }
 
 /*

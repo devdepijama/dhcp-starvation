@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "dhcp/client/utils/nettypes.h"
+#include "settings/constants.h"
 
 #define DHCP_CLIENT_E_SUCCESSFUL 0
 
@@ -38,6 +39,11 @@ typedef struct {
 } dhcp_client_callbacks_cfg_t;
 
 typedef struct {
+    uint8_t mac[LENGTH_MAC_ADDRESS_AS_BYTES];
+    dhcp_client_offer_data_t offer_data;
+} dhcp_client_request_data_t;
+
+typedef struct {
     char *interface_name;
     dhcp_client_callbacks_cfg_t callbacks;
 }dhcp_client_args_t;
@@ -47,7 +53,7 @@ int dhcp_client_create(dhcp_client_t *instance, dhcp_client_args_t args);
 int dhcp_client_init(dhcp_client_t instance);
 
 int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac);
-int dhcp_client_request(dhcp_client_t instance);
+int dhcp_client_request(dhcp_client_t instance, dhcp_client_request_data_t data);
 
 int dhcp_client_destroy(dhcp_client_t instance);
 

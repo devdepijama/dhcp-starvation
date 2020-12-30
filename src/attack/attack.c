@@ -80,7 +80,14 @@ static void _on_ack_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_
 static void _on_offer_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_offer_data_t data) {
     attack_t instance = args;
     _log_offer(instance, data);
-    dhcp_client_request(dhcp_client);
+
+    dhcp_client_request_data_t request_data = {
+        .mac = NULL,
+        .offer_data = data
+    };
+    memcpy(request_data.mac, instance->mac, LENGTH_MAC_ADDRESS_AS_BYTES);
+
+    dhcp_client_request(dhcp_client, request_data);
 }
 
 static void _log_offer(attack_t instance, dhcp_client_offer_data_t offer) {
