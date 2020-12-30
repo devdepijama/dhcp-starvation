@@ -12,33 +12,23 @@
 #define PACKET_BUFFER 4096
 #define DESCRIPTION_INSTANCE "Instance of dhcp client"
 
-typedef struct {
-    dhcp_client_on_offer_callback_t *on_offer_callback;
-    dhcp_client_on_ack_callback_t *on_ack_callback;
-} dhcp_client_callbacks_t;
-
 struct dhcp_client_s {
     logger_t logger;
     network_t network;
-    dhcp_client_callbacks_t callbacks;
+    dhcp_client_callbacks_cfg_t callbacks;
     uint8_t packet[PACKET_BUFFER];
 };
 
 static void _dhcp_on_network_packet_received(network_t instance, const void *args, const uint8_t *frame, size_t length);
+static void _build_network(dhcp_client_t instance, dhcp_client_args_t args);
+static void _build_logger(dhcp_client_t instance, dhcp_client_args_t args);
+static void _setup_callbacks(dhcp_client_t instance, dhcp_client_args_t args);
 
-int dhcp_client_create(dhcp_client_t *instance, dhcp_client_on_offer_callback_t on_offer_callback, dhcp_client_on_ack_callback_t on_ack_callback) {
-    on_frame_received_cfg_t callback_cfg = {
-        .callback = (void (*)(network_t, const uint8_t *, const uint8_t *, size_t)) _dhcp_on_network_packet_received,
-        .args = NULL
-    };
-
+int dhcp_client_create(dhcp_client_t *instance, dhcp_client_args_t args) {
     *instance = memory_alloc(sizeof(struct dhcp_client_s), DESCRIPTION_INSTANCE);
-    callback_cfg.args = *instance;
-
-    logger_create(&((*instance)->logger), "dhcp-client", CONSTANT_LOG_LEVEL);
-    network_create(&((*instance)->network), callback_cfg);
-    (*instance)->callbacks.on_offer_callback = on_offer_callback;
-    (*instance)->callbacks.on_ack_callback = on_ack_callback;
+    _build_logger(*instance, args);
+    _build_network(*instance, args);
+    _setup_callbacks(*instance, args);
 
     return DHCP_CLIENT_E_SUCCESSFUL;
 }
@@ -91,11 +81,58 @@ static void _dhcp_on_network_packet_received(network_t network, const void *args
     logger_info(instance->logger, "Received a DHCP packet");
     if (dhcp->opcode == DHCP_OPTION_OFFER) {
         logger_info(instance->logger, "It's an OFFER...");
+        ip4_t gateway;
+        ip4_t subnet;
+        ip4_t dns;
+        ip4_t ip;
+        uint32_t lease_period;
+
+        // Unpack information from DHCP packet
+        read_dhcp_option(dhcp, MESSAGE_TYPE_DNS, (uint8_t *) &dns, sizeof(dns));
+        read_dhcp_option(dhcp, MESSAGE_TYPE_REQ_SUBNET_MASK, (uint8_t *) &subnet, sizeof(subnet));
+        read_dhcp_option(dhcp, MESSAGE_TYPE_ROUTER, (uint8_t *) &gateway, sizeof(gateway));
+        read_dhcp_option(dhcp, MESSAGE_TYPE_LEASE_TIME_IN_SEC, (uint8_t *) &lease_period, sizeof(lease_period));
+        ip.as_int = dhcp->yiaddr.as_int;
+
+        dhcp_client_offer_data_t data = {
+            .gateway = gateway,
+            .subnet = subnet,
+            .dns = dns,
+            .ip = ip,
+            .lease_period_in_seconds = ntohl(lease_period)
+        };
+        void *args = instance->callbacks.on_offer_callback_cfg.args;
+        instance->callbacks.on_offer_callback_cfg.callback(instance, args, data);
         return;
     }
 
     if (dhcp->opcode == DHCP_OPTION_PACK) {
         logger_info(instance->logger, "It's an ACK...");
+        dhcp_client_ack_data_t data = {
+                .anything = 11
+        };
+        void *args = instance->callbacks.on_ack_callback_cfg.args;
+        instance->callbacks.on_ack_callback_cfg.callback(instance, args, data);
         return;
     }
+}
+
+static void _build_network(dhcp_client_t instance, dhcp_client_args_t args) {
+    network_args_t network_args = {
+        .interface_name = args.interface_name,
+        .on_frame_received_callback = {
+            .callback = (void (*)(network_t, const uint8_t *, const uint8_t *, size_t)) _dhcp_on_network_packet_received,
+            .args = instance
+        }
+    };
+
+    network_create(&(instance->network), network_args);
+}
+
+static void _build_logger(dhcp_client_t instance, dhcp_client_args_t args) {
+    logger_create(&(instance->logger), "dhcp-client", CONSTANT_LOG_LEVEL);
+}
+
+static void _setup_callbacks(dhcp_client_t instance, dhcp_client_args_t args) {
+    memcpy(&(instance->callbacks), &(args.callbacks), sizeof(instance->callbacks));
 }

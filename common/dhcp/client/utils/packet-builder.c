@@ -9,6 +9,7 @@ static void ip_output(struct ip *ip_header, int *len);
 static void udp_output(struct udphdr *udp_header, int *len);
 static void dhcp_output(dhcp_t *dhcp, const uint8_t *mac, int *len);
 static int fill_dhcp_discovery_options(dhcp_t *dhcp);
+static int fill_dhcp_request_options(dhcp_t *dhcp);
 static int fill_dhcp_option(uint8_t *packet, uint8_t code, uint8_t *data, uint8_t len);
 static uint16_t in_cksum(uint16_t *addr, size_t len);
 
@@ -30,8 +31,23 @@ size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8
 }
 
 size_t packet_builder_create_request(uint8_t *packet, size_t size) {
-    strncpy((char *) packet, "mocked_request_packet", size);
-    return MIN(strlen((char *) packet), size);
+    /*
+    size_t len = 0;
+    struct udphdr *udp_header;
+    struct ip *ip_header;
+    dhcp_t *dhcp;
+
+    ip_header = (struct ip *)(packet + sizeof(struct ether_header));
+    udp_header = (struct udphdr *)(((char *)ip_header) + sizeof(struct ip));
+    dhcp = (dhcp_t *)(((char *)udp_header) + sizeof(struct udphdr));
+
+    len = fill_dhcp_discovery_options(dhcp);
+    dhcp_output(dhcp, mac, &len);
+    udp_output(udp_header, &len);
+    ip_output(ip_header, &len);
+    return ether_output(packet, mac, len);
+     */
+    return 0;
 }
 
 /*
@@ -112,6 +128,10 @@ static int fill_dhcp_discovery_options(dhcp_t *dhcp) {
     len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_END, &option, sizeof(option));
 
     return len;
+}
+
+static int fill_dhcp_request_options(dhcp_t *dhcp) {
+
 }
 
 /*

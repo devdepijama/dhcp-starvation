@@ -1,5 +1,6 @@
 #include "dhcp/client/utils/packet-unpacker.h"
 #include "dhcp/client/utils/nettypes.h"
+#include "utils/utils.h"
 
 #include <stdint.h>
 #include <pcap.h>
@@ -31,4 +32,28 @@ int is_dhcp_packet(const uint8_t *frame, size_t lenght, dhcp_t **dhcp_packet) {
 
     *dhcp_packet = (dhcp_t *) ((uint8_t *) udp_packet + sizeof(struct udphdr));
     return TRUE;
+}
+
+int read_dhcp_option(const dhcp_t *dhcp_packet, uint8_t option, uint8_t *value, size_t len) {
+    uint8_t *options = &(dhcp_packet->bp_options);
+    uint8_t tag;
+    uint8_t size;
+
+    do {
+        tag = *options;
+        options++;
+
+        size = *options;
+        options++;
+
+        // The one we're looking for
+        if (tag == option) {
+            memcpy(value, options, MIN(len, size));
+            return TRUE;
+        }
+
+        options += size;
+    } while (tag != MESSAGE_TYPE_END);
+
+    return FALSE;
 }
