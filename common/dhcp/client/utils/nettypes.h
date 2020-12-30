@@ -28,7 +28,9 @@
 #define MESSAGE_TYPE_DOMAIN_NAME            15
 #define MESSAGE_TYPE_REQ_IP                 50
 #define MESSAGE_TYPE_LEASE_TIME_IN_SEC      51
-#define MESSAGE_TYPE_DHCP                   53
+#define MESSAGE_TYPE_DHCP_MESSAGE_TYPE      53
+#define MESSAGE_TYPE_DHCP_IP                54
+#define MESSAGE_TYPE_LEASE_TIME_IN_SEC      51
 #define MESSAGE_TYPE_CLIENT_IDENTIFIER      61
 #define MESSAGE_TYPE_PARAMETER_REQ_LIST     55
 #define MESSAGE_TYPE_END                    255
@@ -36,7 +38,9 @@
 #define DHCP_OPTION_DISCOVER                1
 #define DHCP_OPTION_OFFER                   2
 #define DHCP_OPTION_REQUEST                 3
-#define DHCP_OPTION_PACK                    4
+#define DHCP_OPTION_DECLINE                 4
+#define DHCP_OPTION_ACK                     5
+#define DHCP_OPTION_NAK                     6
 
 #define DHCP_SERVER_PORT    67
 #define DHCP_CLIENT_PORT    68

@@ -11,6 +11,7 @@ typedef struct dhcp_client_s* dhcp_client_t;
 
 // On Offer callback
 typedef struct {
+    ip4_t dhcp_server;
     ip4_t gateway;
     ip4_t subnet;
     ip4_t dns;
