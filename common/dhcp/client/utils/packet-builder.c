@@ -266,12 +266,17 @@ static uint16_t in_cksum(uint16_t *addr, size_t len) {
 }
 
 static void randomize_mac(uint8_t *mac) {
+    static uint32_t mac_seed = 0;
+
+    if (mac_seed == 0) {
+        mac_seed = random();
+    }
+
     mac[0] = 0xBA;
     mac[1] = 0xBA;
-    mac[2] = 0xCA;
-    mac[3] = random() % 255;
-    mac[4] = random() % 255;
-    mac[5] = random() % 255;
+    memcpy(&mac[2], &mac_seed, sizeof(uint32_t));
+
+    mac_seed++;
 }
 
 static char randomize_name(char *name, size_t len) {

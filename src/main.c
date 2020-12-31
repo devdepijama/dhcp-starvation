@@ -55,8 +55,7 @@ int main(int argc, char *argv[]) {
     }
 
     attack_run(attack_algorithm);
-    int seconds_of_wait = 60;
-    while(seconds_of_wait--) {
+    while(TRUE) {
         sleep(1);
     }
 
