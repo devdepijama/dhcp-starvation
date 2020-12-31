@@ -35,9 +35,17 @@ void test_read_of_dhcp_options() {
     assert_true(!strcmp(dns, "192.168.1.1"), "DNS is different than expected!");
 }
 
+void test_random() {
+    printf("Random values: \n");
+    for(int i = 0; i < 10; i++) {
+        printf("%d \n", random());
+    }
+}
+
 int main() {
 
     test_log_of_hex_bytes();
     test_read_of_dhcp_options();
+    test_random();
     return 0;
 }

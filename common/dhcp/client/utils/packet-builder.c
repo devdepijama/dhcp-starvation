@@ -9,7 +9,6 @@ static size_t ether_output(uint8_t *frame, const uint8_t *mac, const uint8_t *ma
 static int fill_dhcp_option(uint8_t *packet, uint8_t code, uint8_t *data, uint8_t len);
 static uint16_t in_cksum(uint16_t *addr, size_t len);
 static void randomize_mac(uint8_t *mac);
-static uint32_t random();
 static char randomize_name(char *name, size_t len);
 
 size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8_t *mac, ip4_t my_ip) {
@@ -276,15 +275,11 @@ static void randomize_mac(uint8_t *mac) {
 }
 
 static char randomize_name(char *name, size_t len) {
-    for(int i = 0; i <= len; i++) {
+    int i = 0;
+    for(i = 0; i < len - 1; i++) {
         char random_letter = (char) (random() % 26);
-        name[i] = (char) (random_letter - 'a');
+        name[i] = (char) (random_letter + 'a');
     }
-}
 
-static uint32_t random() {
-    time_t t;
-    srand((unsigned) time(&t));
-
-    return rand();
+    name[i] = '\0';
 }

