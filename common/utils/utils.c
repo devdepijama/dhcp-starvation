@@ -1,7 +1,11 @@
 #include "utils/utils.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+static uint32_t seed = 0;
 
 void log_bytes(logger_t logger, logger_function_t level, uint8_t *buffer, size_t size) {
     const size_t bytes_per_line = 16;
@@ -48,4 +52,14 @@ void ip_to_string(char *string, ip4_t *ip) {
 int is_big_endian() {
     ip4_t address = { 0x01000000 };
     return address.as_bytes[0];
+}
+
+uint32_t random() {
+    if (seed == 0) {
+        srand(time(NULL));
+        seed = rand();
+        return seed;
+    }
+
+    return rand();
 }

@@ -20,4 +20,6 @@ void ip_to_string(char *string, ip4_t *ip);
 
 int is_big_endian();
 
+uint32_t random();
+
 #endif
