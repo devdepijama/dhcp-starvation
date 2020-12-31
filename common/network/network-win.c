@@ -82,7 +82,7 @@ int network_list_interfaces(network_t instance) {
 
 int network_send(network_t instance, uint8_t *packet, size_t size) {
 
-    logger_info(instance->logger, "Sending a network packet...");
+    logger_debug(instance->logger, "Sending a network packet...");
     log_bytes(instance->logger, logger_debug, packet, size);
 
     if (pcap_inject(instance->pcap_handler, packet, size) <= 0) {
@@ -164,7 +164,6 @@ static int _open_pcap_capture(network_t instance) {
     char errbuf[PCAP_ERRBUF_SIZE];
 
     logger_info(instance->logger, "Using device %s", instance->interface_name);
-    printf("Using device %s", instance->interface_name);
     instance->pcap_handler = pcap_open_live(instance->interface_name, BUFSIZ, 0, 10, errbuf);
     if (instance->pcap_handler == NULL) {
         logger_error(instance->logger, "Failed to open device. Details: %s", errbuf);

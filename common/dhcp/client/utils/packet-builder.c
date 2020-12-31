@@ -3,12 +3,16 @@
 
 #include "utils/utils.h"
 #include <string.h>
+#include <time.h>
 
 static size_t ether_output(uint8_t *frame, const uint8_t *mac, const uint8_t *mac_dest, size_t len);
 static int fill_dhcp_option(uint8_t *packet, uint8_t code, uint8_t *data, uint8_t len);
 static uint16_t in_cksum(uint16_t *addr, size_t len);
+static void randomize_mac(uint8_t *mac);
+static uint32_t random();
+static char randomize_name(char *name, size_t len);
 
-size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8_t *mac) {
+size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8_t *mac, ip4_t my_ip) {
     size_t len = 0;
     struct ip *ip_header = (struct ip *) (packet + sizeof(struct ether_header));
     struct udphdr *udp_header = (struct udphdr *) (((char *)ip_header) + sizeof(struct ip));
@@ -24,7 +28,13 @@ size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8
     dhcp->opcode = DHCP_BOOTREQUEST;
     dhcp->htype = DHCP_HARDWARE_TYPE_10_EHTHERNET;
     dhcp->hlen = 6;
-    memcpy(dhcp->chaddr, mac, ETHER_ADDR_LEN);
+    dhcp->giaddr = my_ip;
+
+    uint8_t client_mac[6];
+    randomize_mac(client_mac);
+
+    memcpy(dhcp->chaddr, client_mac, ETHER_ADDR_LEN);
+    dhcp->xid = random();
     dhcp->magic_cookie = htonl(DHCP_MAGIC_COOKIE);
 
     if (len & 1) len += 1;
@@ -78,7 +88,8 @@ size_t packet_builder_create_request(uint8_t *packet, size_t size, dhcp_client_r
     len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_DHCP_IP, (uint8_t *) &(data.offer_data.dhcp_server), sizeof(data.offer_data.dhcp_server));
 
     // 12 - Hostname
-    char hostname[] = "myeggs";
+    char hostname[10];
+    randomize_name(hostname, sizeof(hostname));
     len += fill_dhcp_option(&dhcp->bp_options[len], MESSAGE_TYPE_CLIENT_HOSTNAME, (uint8_t *) hostname, strlen(hostname));
 
     // 81 - Client Fully Qualified Domain name - IGNORED
@@ -95,10 +106,10 @@ size_t packet_builder_create_request(uint8_t *packet, size_t size, dhcp_client_r
     dhcp->htype = DHCP_HARDWARE_TYPE_10_EHTHERNET;
     dhcp->hlen = 6;
     dhcp->flags = 0x0080;
-    dhcp->xid = 0xBABACA00;
+    dhcp->xid = data.offer_data.xid;
     dhcp->ciaddr = data.offer_data.ip;
     dhcp->yiaddr = data.offer_data.ip;
-    memcpy(dhcp->chaddr, data.mac, ETHER_ADDR_LEN);
+    memcpy(dhcp->chaddr, data.offer_data.client_mac, ETHER_ADDR_LEN);
     dhcp->magic_cookie = htonl(DHCP_MAGIC_COOKIE);
 
     if (len & 1) len += 1;
@@ -253,4 +264,27 @@ static uint16_t in_cksum(uint16_t *addr, size_t len) {
     sum += (sum >> 16);             /* add carry */
     answer = ~sum;              /* truncate to 16 bits */
     return (answer);
+}
+
+static void randomize_mac(uint8_t *mac) {
+    mac[0] = 0xBA;
+    mac[1] = 0xBA;
+    mac[2] = 0xCA;
+    mac[3] = random() % 255;
+    mac[4] = random() % 255;
+    mac[5] = random() % 255;
+}
+
+static char randomize_name(char *name, size_t len) {
+    for(int i = 0; i <= len; i++) {
+        char random_letter = (char) (random() % 26);
+        name[i] = (char) (random_letter - 'a');
+    }
+}
+
+static uint32_t random() {
+    time_t t;
+    srand((unsigned) time(&t));
+
+    return rand();
 }

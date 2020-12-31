@@ -39,11 +39,11 @@ int dhcp_client_init(dhcp_client_t instance) {
     return DHCP_CLIENT_E_SUCCESSFUL;
 }
 
-int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac) {
+int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac, ip4_t my_ip) {
     size_t packet_size = 0;
-    logger_info(instance->logger, "Performing discovery...");
+    logger_debug(instance->logger, "Performing discovery...");
 
-    packet_size = packet_builder_create_discovery(instance->packet, sizeof(instance->packet), mac);
+    packet_size = packet_builder_create_discovery(instance->packet, sizeof(instance->packet), mac, my_ip);
     network_send(instance->network, instance->packet, packet_size);
 
     return DHCP_CLIENT_E_SUCCESSFUL;
@@ -51,7 +51,7 @@ int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac) {
 
 int dhcp_client_request(dhcp_client_t instance, dhcp_client_request_data_t data) {
     size_t packet_size = 0;
-    logger_info(instance->logger, "Performing request...");
+    logger_debug(instance->logger, "Performing request...");
 
     packet_size = packet_builder_create_request(instance->packet, sizeof(instance->packet), data);
     network_send(instance->network, instance->packet, packet_size);
@@ -61,7 +61,7 @@ int dhcp_client_request(dhcp_client_t instance, dhcp_client_request_data_t data)
 
 int dhcp_client_decline(dhcp_client_t instance, dhcp_client_decline_data_t data) {
     size_t packet_size = 0;
-    logger_info(instance->logger, "Performing decline...");
+    logger_debug(instance->logger, "Performing decline...");
 
     packet_size = packet_builder_create_decline(instance->packet, sizeof(instance->packet), data);
     network_send(instance->network, instance->packet, packet_size);
@@ -88,12 +88,12 @@ static void _dhcp_on_network_packet_received(network_t network, const void *args
         return;
     }
 
-    logger_info(instance->logger, "Received a DHCP packet");
+    logger_debug(instance->logger, "Received a DHCP packet");
     uint8_t dhcp_request_type = 0;
     read_dhcp_option(dhcp, MESSAGE_TYPE_DHCP_MESSAGE_TYPE, (uint8_t *) &dhcp_request_type, sizeof(dhcp_request_type));
 
     if (dhcp_request_type == DHCP_OPTION_OFFER) {
-        logger_info(instance->logger, "It's an OFFER...");
+        logger_debug(instance->logger, "It's an OFFER...");
         ip4_t dhcpserver;
         ip4_t gateway;
         ip4_t subnet;
@@ -115,15 +115,17 @@ static void _dhcp_on_network_packet_received(network_t network, const void *args
                 .subnet = subnet,
                 .dns = dns,
                 .ip = ip,
-                .lease_period_in_seconds = ntohl(lease_period)
+                .lease_period_in_seconds = ntohl(lease_period),
+                .xid = dhcp->xid
         };
+        memcpy(&(data.client_mac), dhcp->chaddr, LENGTH_MAC_ADDRESS_AS_BYTES);
         void *args = instance->callbacks.on_offer_callback_cfg.args;
         instance->callbacks.on_offer_callback_cfg.callback(instance, args, data);
         return;
     }
 
     if (dhcp_request_type == DHCP_OPTION_ACK) {
-        logger_info(instance->logger, "It's an ACK...");
+        logger_debug(instance->logger, "It's an ACK...");
         struct ether_header *ether_header = (struct ether_header *) frame;
         dhcp_client_ack_data_t ack_data = {
             .dhcp_server = NULL,
