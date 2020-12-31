@@ -1,3 +1,6 @@
-add_executable (app main.c)
+add_executable (app
+    main.c
+    attack/attack.c
+)
 target_include_directories(app PUBLIC . ../common)
 target_link_libraries (app PUBLIC common)

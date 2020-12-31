@@ -5,6 +5,8 @@
 #include <winsock2.h>
 #include <windows.h>
 
+#include "network/network-types.h"
+
 #define IPVERSION        4
 
 #define	ETHERTYPE_IP	0x0800
@@ -23,23 +25,28 @@
 #define MESSAGE_TYPE_REQ_SUBNET_MASK        1
 #define MESSAGE_TYPE_ROUTER                 3
 #define MESSAGE_TYPE_DNS                    6
+#define MESSAGE_TYPE_CLIENT_HOSTNAME        12
 #define MESSAGE_TYPE_DOMAIN_NAME            15
 #define MESSAGE_TYPE_REQ_IP                 50
-#define MESSAGE_TYPE_DHCP                   53
+#define MESSAGE_TYPE_LEASE_TIME_IN_SEC      51
+#define MESSAGE_TYPE_DHCP_MESSAGE_TYPE      53
+#define MESSAGE_TYPE_DHCP_IP                54
+#define MESSAGE_TYPE_LEASE_TIME_IN_SEC      51
+#define MESSAGE_TYPE_CLIENT_IDENTIFIER      61
 #define MESSAGE_TYPE_PARAMETER_REQ_LIST     55
 #define MESSAGE_TYPE_END                    255
 
 #define DHCP_OPTION_DISCOVER                1
 #define DHCP_OPTION_OFFER                   2
 #define DHCP_OPTION_REQUEST                 3
-#define DHCP_OPTION_PACK                    4
+#define DHCP_OPTION_DECLINE                 4
+#define DHCP_OPTION_ACK                     5
+#define DHCP_OPTION_NAK                     6
 
 #define DHCP_SERVER_PORT    67
 #define DHCP_CLIENT_PORT    68
 
 #define DHCP_MAGIC_COOKIE   0x63825363
-
-typedef uint32_t ip4_t;
 
 /*
  * http://www.tcpipguide.com/free/t_DHCPMessageFormat.htm

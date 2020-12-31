@@ -1,4 +1,5 @@
 #include "utils/utils.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -21,4 +22,30 @@ void log_bytes(logger_t logger, logger_function_t level, uint8_t *buffer, size_t
 
         level(logger, line);
     }
+}
+
+void mac_address_from_string(char *string, uint8_t *mac) {
+    sscanf(string, "%02X:%02X:%02X:%02X:%02X:%02X", &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+}
+
+void mac_address_to_string(char *string, uint8_t *mac) {
+    sprintf(string, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
+void ip_from_string(char *string, ip4_t *ip) {
+    uint32_t first_octet, second_octet, third_octet, fourth_octet;
+    sscanf(string, "%d.%d.%d.%d", &first_octet, &second_octet, &third_octet, &fourth_octet);
+
+    ip->as_int = is_big_endian() ?
+                 ((first_octet << 24) | (second_octet << 16) | (third_octet << 8) | fourth_octet) :
+                 ((fourth_octet << 24) | (third_octet << 16) | (second_octet << 8) | first_octet);
+}
+
+void ip_to_string(char *string, ip4_t *ip) {
+    sprintf(string, "%d.%d.%d.%d", ip->as_bytes[0], ip->as_bytes[1], ip->as_bytes[2], ip->as_bytes[3]);
+}
+
+int is_big_endian() {
+    ip4_t address = { 0x01000000 };
+    return address.as_bytes[0];
 }
