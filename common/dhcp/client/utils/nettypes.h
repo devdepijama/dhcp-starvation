@@ -25,6 +25,7 @@
 #define MESSAGE_TYPE_REQ_SUBNET_MASK        1
 #define MESSAGE_TYPE_ROUTER                 3
 #define MESSAGE_TYPE_DNS                    6
+#define MESSAGE_TYPE_CLIENT_HOSTNAME        12
 #define MESSAGE_TYPE_DOMAIN_NAME            15
 #define MESSAGE_TYPE_REQ_IP                 50
 #define MESSAGE_TYPE_LEASE_TIME_IN_SEC      51
