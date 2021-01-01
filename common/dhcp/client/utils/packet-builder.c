@@ -11,7 +11,7 @@ static uint16_t in_cksum(uint16_t *addr, size_t len);
 static void randomize_mac(uint8_t *mac);
 static char randomize_name(char *name, size_t len);
 
-size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8_t *mac, ip4_t my_ip) {
+size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8_t *mac, ip4_t my_ip, uint32_t xid) {
     size_t len = 0;
     struct ip *ip_header = (struct ip *) (packet + sizeof(struct ether_header));
     struct udphdr *udp_header = (struct udphdr *) (((char *)ip_header) + sizeof(struct ip));
@@ -33,7 +33,7 @@ size_t packet_builder_create_discovery(uint8_t *packet, size_t size, const uint8
     randomize_mac(client_mac);
 
     memcpy(dhcp->chaddr, client_mac, ETHER_ADDR_LEN);
-    dhcp->xid = random();
+    dhcp->xid = xid;
     dhcp->magic_cookie = htonl(DHCP_MAGIC_COOKIE);
 
     if (len & 1) len += 1;

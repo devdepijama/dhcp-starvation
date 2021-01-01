@@ -39,11 +39,11 @@ int dhcp_client_init(dhcp_client_t instance) {
     return DHCP_CLIENT_E_SUCCESSFUL;
 }
 
-int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac, ip4_t my_ip) {
+int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac, ip4_t my_ip, uint32_t xid) {
     size_t packet_size = 0;
     logger_debug(instance->logger, "Performing discovery...");
 
-    packet_size = packet_builder_create_discovery(instance->packet, sizeof(instance->packet), mac, my_ip);
+    packet_size = packet_builder_create_discovery(instance->packet, sizeof(instance->packet), mac, my_ip, xid);
     network_send(instance->network, instance->packet, packet_size);
 
     return DHCP_CLIENT_E_SUCCESSFUL;
@@ -129,7 +129,8 @@ static void _dhcp_on_network_packet_received(network_t network, const void *args
         struct ether_header *ether_header = (struct ether_header *) frame;
         dhcp_client_ack_data_t ack_data = {
             .dhcp_server = NULL,
-            .ip = dhcp->yiaddr.as_int
+            .ip = dhcp->yiaddr.as_int,
+            .xid = dhcp->xid
         };
         read_dhcp_option(dhcp, MESSAGE_TYPE_DHCP_IP, (uint8_t *) &(ack_data.dhcp_server), sizeof(ack_data.dhcp_server));
         memcpy(&(ack_data.dhcp_server_mac), ether_header->ether_shost, LENGTH_MAC_ADDRESS_AS_BYTES);

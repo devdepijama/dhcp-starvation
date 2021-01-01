@@ -31,6 +31,7 @@ typedef struct {
     ip4_t ip;
     ip4_t dhcp_server;
     uint8_t dhcp_server_mac[LENGTH_MAC_ADDRESS_AS_BYTES];
+    uint32_t xid;
 } dhcp_client_ack_data_t;
 typedef void (dhcp_client_on_ack_callback_t(dhcp_client_t, void *, dhcp_client_ack_data_t));
 typedef struct {
@@ -62,7 +63,7 @@ int dhcp_client_create(dhcp_client_t *instance, dhcp_client_args_t args);
 
 int dhcp_client_init(dhcp_client_t instance);
 
-int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac, ip4_t my_ip);
+int dhcp_client_discovery(dhcp_client_t instance, const uint8_t *mac, ip4_t my_ip, uint32_t xid);
 int dhcp_client_request(dhcp_client_t instance, dhcp_client_request_data_t data);
 int dhcp_client_decline(dhcp_client_t instance, dhcp_client_decline_data_t data);
 
