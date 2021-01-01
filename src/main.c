@@ -49,12 +49,15 @@ int main(int argc, char *argv[]) {
     logger_info(logger, "---- DNS: %s", dns_string);
     logger_info(logger, "---- IP: %s", ip_string);
 
-    if (attack_create(&attack_algorithm, args) != ATTACK_E_SUCCESSFUL) {
-        logger_error(logger, "Could not prepare attack");
-        exit(-1);
+    for(int i = 0; i < STARVATION_THREADS; i++) {
+        if (attack_create(&attack_algorithm, args) != ATTACK_E_SUCCESSFUL) {
+            logger_error(logger, "Could not prepare attack");
+            exit(-1);
+        }
+
+        attack_run(attack_algorithm);
     }
 
-    attack_run(attack_algorithm);
     while(TRUE) {
         sleep(1);
     }

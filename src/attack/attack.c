@@ -7,8 +7,11 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #define DESCRIPTION_INSTANCE "attack algorithm"
+
+size_t instances = 0;
 
 struct attack_s {
     logger_t logger;
@@ -18,6 +21,7 @@ struct attack_s {
     char interface_name[LENGTH_INTERFACE_NAME];
     dhcp_client_t dhcp_client;
     size_t burned_ips;
+    uint32_t transaction;
 };
 
 static void _build_dhcp_client(attack_t instance, attack_args_t args);
@@ -67,7 +71,9 @@ static void _build_dhcp_client(attack_t instance, attack_args_t args) {
 }
 
 static void _build_logger(attack_t instance, attack_args_t args) {
-    logger_create(&(instance->logger), "attack-algorithm", CONSTANT_LOG_LEVEL);
+    char logger_name[32];
+    sprintf(logger_name, "starvation-thread-%d", ++instances);
+    logger_create(&(instance->logger), logger_name, CONSTANT_LOG_LEVEL);
 }
 
 static void _extract_fields(attack_t instance, attack_args_t args) {
